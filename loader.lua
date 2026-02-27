@@ -11,7 +11,7 @@ local CURRENT_VERSION = "1.0.5" -- Versão atual deste Loader
 -- URLs de Infraestrutura
 local REPO = "https://raw.githubusercontent.com/joaorqqq/ShopHub/refs/heads/main/"
 local MAIN_URL = REPO .. "main.lua"
-local BACKUP_URL = REPO .. "Backup.env"
+local BACKUP_URL = REPO .. "Backup.lua"
 local VERSION_URL = REPO .. "Version.md"
 
 -- [[ INTERFACE DE CARREGAMENTO ]]
@@ -67,7 +67,7 @@ task.spawn(function()
                 Screen:Destroy()
                 print("-----------------------------------------")
                 print("APEX TEAM: LOADED SUCCESSFUL")
-                print("Source: " .. (isBackup and "Backup.env" or "main.lua"))
+                print("Source: " .. (isBackup and "Backup.lua" or "main.lua"))
                 print("-----------------------------------------")
                 loadCode()
                 return true
