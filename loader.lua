@@ -1,73 +1,88 @@
--- [[ APEX TEAM - OFFICIAL UNIVERSAL LOADER ]]
--- Powered by ShopHub & Apex Infrastructure
+-- [[ APEX TEAM - SHOPAI OFFICIAL LOADER ]]
+-- Version: 1.0.5 | Sync: Active | Redundancy: Enabled
 
-local function _d(s)
-    local o = ""
-    for i = 1, #s do o = o .. string.char(string.byte(s, i) - 1) end
-    return o
-end
-
--- Configurações de Boot
-local CONFIG = {
-    Main = "https://raw.githubusercontent.com/joaorqqq/ShopHub/refs/heads/main/main.lua",
-    Version = "https://raw.githubusercontent.com/joaorqqq/ShopHub/refs/heads/main/Version.md"
-}
-
--- Interface de Carregamento Rápida
+local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+
+local CURRENT_VERSION = "1.0.5" -- Versão atual deste Loader
+
+-- URLs de Infraestrutura
+local REPO = "https://raw.githubusercontent.com/joaorqqq/ShopHub/refs/heads/main/"
+local MAIN_URL = REPO .. "main.lua"
+local BACKUP_URL = REPO .. "Backup.env"
+local VERSION_URL = REPO .. "Version.md"
+
+-- [[ INTERFACE DE CARREGAMENTO ]]
 local Screen = Instance.new("ScreenGui", CoreGui)
-Screen.Name = "ApexLoader"
+local MainFrame = Instance.new("Frame", Screen)
+MainFrame.Size = UDim2.new(0, 300, 0, 100)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -50)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+Instance.new("UICorner", MainFrame)
+local Stroke = Instance.new("UIStroke", MainFrame)
+Stroke.Color = Color3.fromRGB(0, 170, 255)
 
-local Main = Instance.new("Frame", Screen)
-Main.Size = UDim2.new(0, 320, 0, 80)
-Main.Position = UDim2.new(0.5, -160, 0.5, -40)
-Main.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-Main.BorderSizePixel = 0
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
-Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 150, 255)
+local Status = Instance.new("TextLabel", MainFrame)
+Status.Size = UDim2.new(1, 0, 1, 0)
+Status.BackgroundTransparency = 1
+Status.TextColor3 = Color3.fromRGB(255, 255, 255)
+Status.Font = Enum.Font.GothamBold
+Status.TextSize = 13
+Status.Text = "Checking Version..."
 
-local Label = Instance.new("TextLabel", Main)
-Label.Size = UDim2.new(1, 0, 1, 0)
-Label.BackgroundTransparency = 1
-Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-Label.Font = Enum.Font.GothamMedium
-Label.TextSize = 14
-Label.Text = "Initializing Apex Core..."
-
--- [ PROCESSO DE CARREGAMENTO ]
+-- [[ LÓGICA DE CARREGAMENTO ]]
 task.spawn(function()
-    -- 1. Check de Versão
-    local vSuccess, vContent = pcall(function() return game:HttpGet(CONFIG.Version) end)
-    if vSuccess then
-        Label.Text = "Apex ShopAI v" .. vContent:gsub("%s+", "")
+    -- 1. Checagem de Versão
+    local vSuccess, vContent = pcall(function() 
+        return game:HttpGet(VERSION_URL .. "?t=" .. tick()) 
+    end)
+    
+    local latestVersion = vSuccess and vContent:gsub("%s+", "") or "Unknown"
+    
+    if latestVersion ~= CURRENT_VERSION and latestVersion ~= "Unknown" then
+        Status.Text = "Update Required: v" .. latestVersion
+        Status.TextColor3 = Color3.fromRGB(255, 50, 80)
+        warn("Apex Team: Sua versão (v" .. CURRENT_VERSION .. ") está desatualizada. Versão atual: v" .. latestVersion)
+        task.wait(2) -- Dá tempo do usuário ver que precisa atualizar
+    else
+        Status.Text = "Version v" .. CURRENT_VERSION .. " Verified"
+        Status.TextColor3 = Color3.fromRGB(0, 255, 150)
         task.wait(0.5)
     end
 
-    -- 2. Download do Script Principal (Dependent)
-    Label.Text = "Downloading Main Module..."
-    local sSuccess, sContent = pcall(function() 
-        -- Adicionamos um tick() no final para evitar cache do GitHub
-        return game:HttpGet(CONFIG.Main .. "?t=" .. tick()) 
-    end)
+    -- 2. Função de Loadstring com Failover
+    local function TryLoad(url, isBackup)
+        Status.Text = isBackup and "Loading Backup Protocol..." or "Downloading Main Core..."
+        Status.TextColor3 = isBackup and Color3.fromRGB(255, 165, 0) or Color3.fromRGB(255, 255, 255)
 
-    if sSuccess then
-        Label.Text = "Booting ShopAI..."
-        Label.TextColor3 = Color3.fromRGB(0, 255, 150)
-        task.wait(0.5)
-        
-        Screen:Destroy()
-        
-        -- Execução Segura na Memória
-        local finalScript = loadstring(sContent)
-        if finalScript then
-            finalScript()
-        else
-            warn("Apex Error: Syntax error in main module.")
+        local success, content = pcall(function()
+            return game:HttpGet(url .. "?t=" .. tick())
+        end)
+
+        if success and content and #content > 50 then
+            local loadCode = loadstring(content)
+            if loadCode then
+                Screen:Destroy()
+                print("-----------------------------------------")
+                print("APEX TEAM: LOADED SUCCESSFUL")
+                print("Source: " .. (isBackup and "Backup.env" or "main.lua"))
+                print("-----------------------------------------")
+                loadCode()
+                return true
+            end
         end
-    else
-        Label.Text = "Connection Failed. Check GitHub Status."
-        Label.TextColor3 = Color3.fromRGB(255, 50, 80)
-        task.wait(3)
-        Screen:Destroy()
+        return false
+    end
+
+    -- Tenta o Main. Se falhar, tenta o Backup.
+    if not TryLoad(MAIN_URL, false) then
+        if not TryLoad(BACKUP_URL, true) then
+            Status.Text = "Critical Error: All servers offline."
+            Status.TextColor3 = Color3.fromRGB(255, 50, 80)
+            task.wait(3)
+            Screen:Destroy()
+        end
     end
 end)
