@@ -6,7 +6,7 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
-local CURRENT_VERSION = "1.0.5" -- Versão atual deste Loader
+local CURRENT_VERSION = "V1.0" -- Versão atual deste Loader
 
 -- URLs de Infraestrutura
 local REPO = "https://raw.githubusercontent.com/joaorqqq/ShopHub/refs/heads/main/"
